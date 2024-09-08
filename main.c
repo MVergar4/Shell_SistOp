@@ -48,6 +48,7 @@ int parsearPipes(char *cmd, char **cmds) {
     }
     return i;  // Retorna el número de comandos separados por pipes
 }
+
 void EjecutarPipes(char **cmds, int num_cmds) {
     int pipefd[2];
     pid_t pid;
@@ -65,6 +66,7 @@ void EjecutarPipes(char **cmds, int num_cmds) {
                 dup2(pipefd[1], 1);  // Reemplaza la salida estándar por la salida del pipe
             }
             close(pipefd[0]);
+            close(pipefd[1]);
 
             char *args[Max_Argumentos];
             parsearComando(cmds[i], args);
@@ -79,6 +81,7 @@ void EjecutarPipes(char **cmds, int num_cmds) {
             fd_in = pipefd[0];  // La entrada ahora es la salida del pipe anterior
         }
     }
+    close(fd_in); // Cerrar el último descriptor de archivo abierto
 }
 
 void favsCmd(char **args) {
