@@ -66,7 +66,7 @@ void EjecutarPipes(char **cmds, int num_cmds) {
             }
             close(pipefd[0]);
 
-            char *args[MAX_ARGS];
+            char *args[Max_Argumentos];
             parsearComando(cmds[i], args);
             if (execvp(args[0], args) < 0) {
                 perror("Error en exec");
@@ -107,7 +107,7 @@ void favsCmd(char **args) {
         int num = atoi(args[1]);
         if(num > 0 && num <= MAX_FAV && favoritos[num - 1] != NULL){
             char *Compatible[] = {favoritos[num - 1], NULL};
-            executeCommand(Compatible);
+            EjecutarComando(Compatible);
             printf("favejecutar\n");
         }
         else{
@@ -205,7 +205,7 @@ void set(char **action){
 
 int main() {
     char cmd[Max_Caracteres];
-    char *cmds[Max_pipes]
+    char *cmds[Max_pipes];
     char *args[Max_Argumentos];
 
     while (1) {
@@ -228,7 +228,7 @@ int main() {
 
         // Ejecutar el comando
         if(num_cmds>1){
-            EjecutarPipes();
+            EjecutarPipes(cmds,num_cmds);
         } else{
             // Parsear la entrada
             parsearComando(cmd, args);
