@@ -17,7 +17,14 @@ char *favoritos[MAX_FAV];
 
 FILE *fp;
 
-void executeCommand(char **args) {
+void parsearComando(char *cmd, char **args) {
+    for (int i = 0; i < Max_Argumentos; i++) {
+        args[i] = strsep(&cmd, " ");
+        if (args[i] == NULL) break;
+    }
+}
+
+void EjecutarComando(char **args) {
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -31,6 +38,46 @@ void executeCommand(char **args) {
     } else {
         // Proceso padre
         waitpid(pid,NULL,0);
+    }
+}
+
+int parsearPipes(char *cmd, char **cmds) {
+    int i = 0;
+    while ((cmds[i] = strsep(&cmd, "|")) != NULL) {
+        i++;
+    }
+    return i;  // Retorna el número de comandos separados por pipes
+}
+void EjecutarPipes(char **cmds, int num_cmds) {
+    int pipefd[2];
+    pid_t pid;
+    int fd_in = 0;  // Inicialmente la entrada es stdin
+
+    for (int i = 0; i < num_cmds; i++) {
+        pipe(pipefd);
+        if ((pid = fork()) == -1) {
+            perror("Error en fork");
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            // Proceso hijo
+            dup2(fd_in, 0);  // Reemplaza la entrada estándar por la entrada anterior
+            if (i < num_cmds - 1) {
+                dup2(pipefd[1], 1);  // Reemplaza la salida estándar por la salida del pipe
+            }
+            close(pipefd[0]);
+
+            char *args[MAX_ARGS];
+            parsearComando(cmds[i], args);
+            if (execvp(args[0], args) < 0) {
+                perror("Error en exec");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            // Proceso padre
+            wait(NULL);
+            close(pipefd[1]);
+            fd_in = pipefd[0];  // La entrada ahora es la salida del pipe anterior
+        }
     }
 }
 
@@ -156,17 +203,9 @@ void set(char **action){
     printSetComands();
 }
 
-void parseCommand(char *cmd, char **args) {
-    for (int i = 0; i < Max_Argumentos; i++) {
-        args[i] = strsep(&cmd, " ");
-        if (args[i] == NULL) break;
-    }
-}
-
-
-
 int main() {
     char cmd[Max_Caracteres];
+    char *cmds[Max_pipes]
     char *args[Max_Argumentos];
 
     while (1) {
@@ -184,21 +223,27 @@ int main() {
         // Comprobar si el comando es "exit"
         if (strcmp(cmd, "exit") == 0) break;
 
-        // Parsear la entrada
-        parseCommand(cmd, args);
+        // Parsear comandos con pipes
+        int num_cmds = parsearPipes(cmd, cmds);
 
         // Ejecutar el comando
-        if(strcmp(cmd,"cd") == 0) {
-            cd(args[1]);
-        }
-        else if(strcmp(cmd,"set") == 0) {
-            set(args);
-        }
-        else if(strcmp(cmd,"favs") == 0){
-            favsCmd(args);
-        }
-        else{
-            executeCommand(args);
+        if(num_cmds>1){
+            EjecutarPipes();
+        } else{
+            // Parsear la entrada
+            parsearComando(cmd, args);
+            if(strcmp(cmd,"cd") == 0) {
+                cd(args[1]);
+            }
+            else if(strcmp(cmd,"set") == 0) {
+                set(args);
+            }
+            else if(strcmp(cmd,"favs") == 0){
+                favsCmd(args);
+            }
+            else{
+                EjecutarComando(args);
+            }
         }
         
     }
