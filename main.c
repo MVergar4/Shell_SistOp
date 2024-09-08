@@ -21,10 +21,12 @@ void parsearComando(char *cmd, char **args) {
     for (int i = 0; i < Max_Argumentos; i++) {
         args[i] = strsep(&cmd, " ");
         if (args[i] == NULL) break;
+        if (strlen(args[i]) == 0) i--;  // Manejar múltiples espacios
     }
 }
 
 void EjecutarComando(char **args) {
+    if (args[0] == NULL) return;  // Si no hay comando, salir
     pid_t pid = fork();
 
     if (pid < 0) {
