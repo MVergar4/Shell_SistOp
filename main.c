@@ -10,7 +10,7 @@
 #define Max_Caracteres 1024  // Tamaño máximo de la línea de comando
 #define Max_Argumentos 64    // Número máximo de argumentos
 #define Max_pipes 10         // Número maximo de argumentos concatenados con pipes
-#define MAX_FAV 1000         // Número máximo de comandos guardados como favoritos
+#define MAX_FAV 10         // Número máximo de comandos guardados como favoritos
 
 char DirectorioAnterior[Max_Caracteres];
 char *favoritos[MAX_FAV];
@@ -34,29 +34,47 @@ void executeCommand(char **args) {
     }
 }
 
-void favsCmd(char **args) {
+typedef struct _fav{
+    int id; // -1 significa no activo
+    char comando[Max_Caracteres];
+} Fav;
+
+void clearFav(Fav favs[]){
+    for (int i = 0; i < MAX_FAV; i++) {
+	favs[i].id = -1;	
+    }
+}
+
+int looking = 0;
+void addFav(char *comando,Fav favs[]){
+    favs[looking].id = looking + 1;
+    strcpy(favs[looking].comando,comando);
+    looking++;
+}
+
+void favsCmd(char **args, Fav favsRam[]) {
     if (strcmp(args[1], "crear") == 0) {
         fp = fopen(args[2], "w+");
         printf("favcrear\n");
-        
-    } else if (strcmp(args[1], "mostrar") == 0) {
-
-        printf("favmostrar\n");
-
-    } else if (strcmp(args[1], "eliminar") == 0) {
-
+    } 
+    else if (strcmp(args[1], "mostrar") == 0) {
+	printf("\n| Favs en ram |\n");
+	for (int i = 0; i < MAX_FAV; i++) {
+	    if(favsRam[i].id == -1)
+		continue;
+	    printf("%d. %s\n",favsRam[i].id,favsRam[i].comando);
+	}
+    } 
+    else if (strcmp(args[1], "eliminar") == 0) {
         printf("faveliminar\n");
-
-    } else if (strcmp(args[1], "buscar") == 0) {
-
+    } 
+    else if (strcmp(args[1], "buscar") == 0) {
         printf("favbuscar\n");
-
-    } else if (strcmp(args[1], "borrar") == 0) {
-
+    }
+    else if (strcmp(args[1], "borrar") == 0) {
         printf("favborrar\n");
-
-    } else if (args[1] != NULL && args[2] != NULL && strcmp(args[2], "ejecutar") == 0) {
-
+    } 
+    else if (args[1] != NULL && args[2] != NULL && strcmp(args[2], "ejecutar") == 0) {
         int num = atoi(args[1]);
         if(num > 0 && num <= MAX_FAV && favoritos[num - 1] != NULL){
             char *Compatible[] = {favoritos[num - 1], NULL};
@@ -66,16 +84,16 @@ void favsCmd(char **args) {
         else{
             printf("Error: Número favorito fuera de rango o no valido");
         }
-    } else if (strcmp(args[1], "cargar") == 0) {
-
+    }
+    else if (strcmp(args[1], "cargar") == 0) {
         printf("favcargar\n");
-
-    } else if (strcmp(args[1], "guardar") == 0) {
+    } 
+    else if (strcmp(args[1], "guardar") == 0) {
         fclose(fp);
         fp = fopen(args[2], "w+");
         printf("favguardar\n");
-
-    } else {
+    } 
+    else {
         printf("Error, no se ha proporcionado un argumento valido para el comando 'favs'\n");
     }
 }
@@ -163,10 +181,13 @@ void parseCommand(char *cmd, char **args) {
     }
 }
 
-
-
 int main() {
+
+    Fav favsRam[MAX_FAV];
+    clearFav(favsRam);
+
     char cmd[Max_Caracteres];
+    char cmdNoSplit[Max_Caracteres];
     char *args[Max_Argumentos];
 
     while (1) {
@@ -184,23 +205,26 @@ int main() {
         // Comprobar si el comando es "exit"
         if (strcmp(cmd, "exit") == 0) break;
 
+	strcpy(cmdNoSplit,cmd);
         // Parsear la entrada
         parseCommand(cmd, args);
 
         // Ejecutar el comando
         if(strcmp(cmd,"cd") == 0) {
             cd(args[1]);
+	    addFav(cmdNoSplit, favsRam);
         }
         else if(strcmp(cmd,"set") == 0) {
             set(args);
+	    addFav(cmdNoSplit, favsRam);
         }
         else if(strcmp(cmd,"favs") == 0){
-            favsCmd(args);
+            favsCmd(args,favsRam);
         }
         else{
             executeCommand(args);
+	    addFav(cmdNoSplit, favsRam);
         }
-        
     }
     return 0;
 }
