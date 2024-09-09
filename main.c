@@ -25,6 +25,14 @@ void parsearComando(char *cmd, char **args) {
     }
 }
 
+void parsearComillas(char *cmd, char **args) {
+    for (int i = 0; i < Max_Argumentos; i++) {
+        args[i] = strsep(&cmd, "\"");
+        if (args[i] == NULL) break;
+        if (strlen(args[i]) == 0) i--;  // Manejar múltiples espacios
+    }
+}
+
 void EjecutarComando(char **args) {
     if (args[0] == NULL) return;  // Si no hay comando, salir
     pid_t pid = fork();
@@ -170,7 +178,7 @@ void cd(char *ruta){
 }
 
 void printSetComands(){
-    printf("\n  Comandos disponibles:\nset recordatorio segundos mensaje\n\n");
+    printf("\n  Comandos disponibles:\nset recordatorio segundos \"mensaje\"\n\n");
 } 
 
 void sig_usr(int signo){
@@ -178,14 +186,16 @@ void sig_usr(int signo){
     printf("Signal caught!");
     return;
 }
+
+char *argsTitle[2];
 void recordatorio(char **action){
-    if(action[2] == NULL || action[3] == NULL){
+    if(action[2] == NULL || action[3] == NULL || argsTitle[1] == NULL){
 	printSetComands();
 	return;
     }
 
     int segundos = atoi(action[2]);
-    char *mensaje = action[3];
+    char *mensaje = argsTitle[1];
 
     if(segundos < 0){
 	printf("\n No se permiten segundos negativos\n");
@@ -240,6 +250,7 @@ int main() {
 
     char cmd[Max_Caracteres];
     char cmdNoSplit[Max_Caracteres];
+    char cmdNoSplit2[Max_Caracteres];
     char *cmds[Max_pipes];
     char *args[Max_Argumentos];
 
@@ -257,6 +268,10 @@ int main() {
         
         // Comprobar si el comando es "exit"
         if (strcmp(cmd, "exit") == 0) break;
+
+	// Parsear comillas
+	strcpy(cmdNoSplit2,cmd);
+	parsearComillas(cmdNoSplit2,argsTitle);
 
         // Parsear comandos con pipes
         int num_cmds = parsearPipes(cmd, cmds);
