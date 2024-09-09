@@ -17,17 +17,9 @@ char *favoritos[MAX_FAV];
 
 FILE *fp;
 
-void parsearComando(char *cmd, char **args) {
+void parsearComando(char *cmd, char **args,char *token) {
     for (int i = 0; i < Max_Argumentos; i++) {
-        args[i] = strsep(&cmd, " ");
-        if (args[i] == NULL) break;
-        if (strlen(args[i]) == 0) i--;  // Manejar múltiples espacios
-    }
-}
-
-void parsearComillas(char *cmd, char **args) {
-    for (int i = 0; i < Max_Argumentos; i++) {
-        args[i] = strsep(&cmd, "\"");
+        args[i] = strsep(&cmd, token);
         if (args[i] == NULL) break;
         if (strlen(args[i]) == 0) i--;  // Manejar múltiples espacios
     }
@@ -56,7 +48,7 @@ typedef struct _fav{
     char comando[Max_Caracteres];
 } Fav;
 
-int parsearPipes(char *cmd, char **cmds) {
+int contarPipes(char *cmd, char **cmds) {
     int i = 0;
         while ((cmds[i] = strsep(&cmd, "|")) != NULL) {
         i++;
@@ -84,7 +76,7 @@ void EjecutarPipes(char **cmds, int num_cmds) {
             close(pipefd[1]);
 
             char *args[Max_Argumentos];
-            parsearComando(cmds[i], args);
+            parsearComando(cmds[i], args," ");
             if (execvp(args[0], args) < 0) {
                 perror("Error en exec");
                 exit(EXIT_FAILURE);
@@ -271,10 +263,10 @@ int main() {
 
 	// Parsear comillas
 	strcpy(cmdNoSplit2,cmd);
-	parsearComillas(cmdNoSplit2,argsTitle);
+	parsearComando(cmdNoSplit2,argsTitle,"\"");
 
         // Parsear comandos con pipes
-        int num_cmds = parsearPipes(cmd, cmds);
+        int num_cmds = contarPipes(cmd, cmds);
 
         // Ejecutar el comando
         if(num_cmds>1){
@@ -282,7 +274,7 @@ int main() {
         } else{
 	    strcpy(cmdNoSplit,cmd);
             // Parsear la entrada
-            parsearComando(cmd, args);
+            parsearComando(cmd, args," ");
             if(strcmp(cmd,"cd") == 0) {
                 cd(args[1]);
 		addFav(cmdNoSplit,favsRam);
