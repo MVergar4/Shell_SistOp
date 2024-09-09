@@ -17,7 +17,16 @@ char *favoritos[MAX_FAV];
 
 FILE *fp;
 
-void executeCommand(char **args) {
+void parsearComando(char *cmd, char **args) {
+    for (int i = 0; i < Max_Argumentos; i++) {
+        args[i] = strsep(&cmd, " ");
+        if (args[i] == NULL) break;
+        if (strlen(args[i]) == 0) i--;  // Manejar múltiples espacios
+    }
+}
+
+void EjecutarComando(char **args) {
+    if (args[0] == NULL) return;  // Si no hay comando, salir
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -38,6 +47,49 @@ typedef struct _fav{
     int id; // -1 significa no activo
     char comando[Max_Caracteres];
 } Fav;
+
+int parsearPipes(char *cmd, char **cmds) {
+    int i = 0;
+        while ((cmds[i] = strsep(&cmd, "|")) != NULL) {
+        i++;
+    }
+    return i;  // Retorna el número de comandos separados por pipes
+}
+
+void EjecutarPipes(char **cmds, int num_cmds) {
+    int pipefd[2];
+    pid_t pid;
+    int fd_in = 0;  // Inicialmente la entrada es stdin
+
+    for (int i = 0; i < num_cmds; i++) {
+        pipe(pipefd);
+        if ((pid = fork()) == -1) {
+            perror("Error en fork");
+            exit(EXIT_FAILURE);
+        } else if (pid == 0) {
+            // Proceso hijo
+            dup2(fd_in, 0);  // Reemplaza la entrada estándar por la entrada anterior
+            if (i < num_cmds - 1) {
+                dup2(pipefd[1], 1);  // Reemplaza la salida estándar por la salida del pipe
+            }
+            close(pipefd[0]);
+            close(pipefd[1]);
+
+            char *args[Max_Argumentos];
+            parsearComando(cmds[i], args);
+            if (execvp(args[0], args) < 0) {
+                perror("Error en exec");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            // Proceso padre
+            wait(NULL);
+            close(pipefd[1]);
+            fd_in = pipefd[0];  // La entrada ahora es la salida del pipe anterior
+        }
+    }
+    close(fd_in); // Cerrar el último descriptor de archivo abierto
+}
 
 void clearFav(Fav favs[]){
     for (int i = 0; i < MAX_FAV; i++) {
@@ -78,7 +130,7 @@ void favsCmd(char **args, Fav favsRam[]) {
         int num = atoi(args[1]);
         if(num > 0 && num <= MAX_FAV && favoritos[num - 1] != NULL){
             char *Compatible[] = {favoritos[num - 1], NULL};
-            executeCommand(Compatible);
+            EjecutarComando(Compatible);
             printf("favejecutar\n");
         }
         else{
@@ -188,6 +240,7 @@ int main() {
 
     char cmd[Max_Caracteres];
     char cmdNoSplit[Max_Caracteres];
+    char *cmds[Max_pipes];
     char *args[Max_Argumentos];
 
     while (1) {
@@ -205,25 +258,31 @@ int main() {
         // Comprobar si el comando es "exit"
         if (strcmp(cmd, "exit") == 0) break;
 
-	strcpy(cmdNoSplit,cmd);
-        // Parsear la entrada
-        parseCommand(cmd, args);
+        // Parsear comandos con pipes
+        int num_cmds = parsearPipes(cmd, cmds);
 
         // Ejecutar el comando
-        if(strcmp(cmd,"cd") == 0) {
-            cd(args[1]);
-	    addFav(cmdNoSplit, favsRam);
-        }
-        else if(strcmp(cmd,"set") == 0) {
-            set(args);
-	    addFav(cmdNoSplit, favsRam);
-        }
-        else if(strcmp(cmd,"favs") == 0){
-            favsCmd(args,favsRam);
-        }
-        else{
-            executeCommand(args);
-	    addFav(cmdNoSplit, favsRam);
+        if(num_cmds>1){
+            EjecutarPipes(cmds,num_cmds);
+        } else{
+	    strcpy(cmdNoSplit,cmd);
+            // Parsear la entrada
+            parsearComando(cmd, args);
+            if(strcmp(cmd,"cd") == 0) {
+                cd(args[1]);
+		addFav(cmdNoSplit,favsRam);
+            }
+            else if(strcmp(cmd,"set") == 0) {
+                set(args);
+		addFav(cmdNoSplit,favsRam);
+            }
+            else if(strcmp(cmd,"favs") == 0){
+                favsCmd(args,favsRam);
+            }
+            else{
+                EjecutarComando(args);
+		addFav(cmdNoSplit,favsRam);
+            }
         }
     }
     return 0;
