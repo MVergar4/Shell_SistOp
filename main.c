@@ -45,7 +45,7 @@ void EjecutarComando(char **args) {
 
 int parsearPipes(char *cmd, char **cmds) {
     int i = 0;
-    while ((cmds[i] = strsep(&cmd, "|")) != NULL) {
+        while ((cmds[i] = strsep(&cmd, "|")) != NULL) {
         i++;
     }
     return i;  // Retorna el número de comandos separados por pipes
