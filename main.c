@@ -168,7 +168,10 @@ void favsCmd(char **args, Fav favsRam[]) {
 	    return;
 	}
 	char info[Max_Caracteres];
-	fgets(info,Max_Caracteres,fRutap);
+	if(fgets(info,Max_Caracteres,fRutap) == NULL){
+	    printf("No se ha creado el archivo para favs, porfavor use el comando \"favs crear ruta/nombrearchivo.txt\"\n");
+	    return;
+	}
 	fclose(fRutap);
 
 	fp = fopen(info, "w+");
