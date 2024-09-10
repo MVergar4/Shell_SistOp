@@ -91,6 +91,10 @@ void eliminarFav(int id, Fav favs[]){
 
 int ejecutandoFavs = 0;
 void favsCmd(char **args, Fav favsRam[]) {
+    if(args[1] == NULL){
+	printf("\nFalta los argumentos...\n");
+	return;
+    }
     if (strcmp(args[1], "crear") == 0) {
 	fp = fopen(args[2], "w+");
 
@@ -98,6 +102,7 @@ void favsCmd(char **args, Fav favsRam[]) {
 	fRutap = fopen(pathSavePath,"w+");
 	fputs(path,fRutap);
 	fclose(fRutap);
+	fclose(fp);
 	printf("\nArchivo creado satisfactoriamente!\n");
     } 
     else if (strcmp(args[1], "mostrar") == 0) {
@@ -189,7 +194,39 @@ void favsCmd(char **args, Fav favsRam[]) {
         }
     }
     else if (strcmp(args[1], "cargar") == 0) {
-        printf("favcargar\n");
+	fRutap = fopen(pathSavePath, "r");
+	char info[Max_Caracteres];
+	char getting[Max_Caracteres];
+	char *argumentos[2];
+	fgets(info,Max_Caracteres,fRutap);
+	fclose(fRutap);
+
+	fp = fopen(info, "r");
+	if(pathSavePath == NULL || fRutap == NULL || fp == NULL){
+	    printf("No se ha creado el archivo para favs, porfavor use el comando \"favs crear ruta/nombrearchivo.txt\"\n");
+	    return;
+	}
+	clearFav(favsRam);
+	looking = 0;
+	for (int i = 0; i < MAX_FAV; ++i) {
+	    if(fgets(getting,Max_Caracteres,fp) == NULL && i == 0)
+		break;
+	    parsearComando(getting,argumentos,"\n");
+	    if(getting == NULL)
+		break;
+	    addFav(argumentos[0],favsRam);
+	}
+
+	fclose(fp);
+        printf("\nSe han cargado todos los comandos de los favs en disco de path: %s\n(Al cargar se sustituyo los favs de la RAM con los guardados en disco)\n",info);
+
+	printf("\n| Favs en ram |\n");
+	for (int i = 0; i < MAX_FAV; i++) {
+	    if(favsRam[i].id == -1)
+		break;
+	    printf("%d. %s\n",favsRam[i].id,favsRam[i].comando);
+	}
+	printf("\n");
     } 
     else if (strcmp(args[1], "guardar") == 0) {
 	fRutap = fopen(pathSavePath, "r");
